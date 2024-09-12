@@ -1,0 +1,92 @@
+input {
+  beats {
+    port => 5044
+  }
+}
+
+
+filter {
+  if "Error" in [message] {
+    grok {
+      # Match nginx headers
+      match => {
+        "message" => '%{IP:client_ip} - - \[%{HTTPDATE:access_time}\] "%{WORD:http_method} %{URIPATH:request_page}  HTTP/%{NUMBER:http_version}" %{NUMBER:response_code} %{NUMBER:response_size} "-" "%{GREEDYDATA:user_agent}"'
+      }
+      match => {
+        "message" => '%{TIMESTAMP_ISO8601:timestamp} %{DATA:thread} %{DATA:log_level} %{DATA:class} - %{GREEDYDATA:message}'
+      }
+    }
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => "http://es:9200"
+    index => "filebeat-%{+YYYY.MM.dd}"
+    user => "elastic"
+    password => "changeme"
+    #cacert => ""
+    # ssl => true
+    # ssl_certificate_verification => false
+
+  }
+}
+
+# 01:33:43.905 facef6ab9ad247bdacbc8b9a97482481 ERROR s.e.p.c.s.GlobalDefaultExceptionHandler - -------> Common exception.... 
+
+
+# 01:33:43.905 facef6ab9ad247bdacbc8b9a97482481 ERROR s.e.p.c.s.GlobalDefaultExceptionHandler - -------> Common exception.... 
+
+# if "ERROR" in [message] {
+#     grok {
+#       match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{DATA:thread} %{DATA:log_level} %{DATA:class} - %{GREEDYDATA:message}" }
+#     }
+#   } else {
+#     drop { }
+#   }
+
+if "ERROR" in [message] {
+    
+  } else {
+    drop { }
+  }
+
+
+    # If we have a stack trace, let's parse it separately
+    if [message] =~ /\n/ {
+      grok {
+        match => { "message" => "(?m)%{GREEDYDATA:error_message}\n%{JAVASTACKTRACEPART:stacktrace}" }
+        timeout_millis => 1000
+        overwrite => [ "error_message", "stacktrace" ]
+      }
+    }
+
+
+    # First, we need to handle multi-line logs
+    multiline {
+      pattern => "^%{TIME}"
+      negate => true
+      what => "previous"
+    }
+
+
+dissect { mapping => { "message" => "[%{loglevel}] %{[@metadata][timestamp]} %{+[@metadata][timestamp]} %{+[@metadata][timestamp]} [%{thread}]  %{javaclass} - %{loggedMessage}" } }
+mutate { strip => [ "loglevel" ] }
+date { match => [ "%{+[@metadata][timestamp]", "dd-MM-YYYY hh:mm:ss.SSS a" ] }
+
+
+filter {
+  if "ERROR" in [message] {
+    grok {
+      match => {
+        "message" => '%{IP:client_ip} - - \[%{HTTPDATE:access_time}\] "%{WORD:http_method} %{URIPATH:request_page}  HTTP/%{NUMBER:http_version}" %{NUMBER:response_code} %{NUMBER:response_size} "-" "%{GREEDYDATA:user_agent}"'
+    }
+
+    grok {
+      match => { "message" => "(?m)%{TIME:timestamp} %{WORD:request_id} %{LOGLEVEL:log_level} %{DATA:class} - % {GREEDYDATA:error_message}(\n%{JAVASTACKTRACEPART:stacktrace})?" }
+      timeout_millis => 10000
+    }
+  } else {
+    drop { }
+  }
+}

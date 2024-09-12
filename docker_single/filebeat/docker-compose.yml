@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: filebeat
+    # mem_limit: 1g
+    environment: 
+      - BEAT_LOG_OPTS=-d elasticsearch
+    # command: >
+    #   # bash -c "if (! elasticsearch-plugin list | grep analysis-icu); then elasticsearch-plugin install analysis-icu ; fi
+    #   # && /usr/local/bin/docker-entrypoint.sh elasticsearch"
+    # ulimits:
+    #   memlock:
+    #     soft: -1
+    #     hard: -1
+      # nofile:
+      #   soft: 65536
+      #   hard: 65536
+    volumes:
+      - ./data:/usr/share/filebeat/data:rw
+      # - /var/lib/docker/containers:/usr/share/dockerlogs/data:ro
+      # - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ../nginx/config/access1.log:/usr/share/filebeat/logs/access.log
+
+    ports:
+      - 5040:5040
+    networks:
+      - "network1"
+    healthcheck:
+      test: ["CMD", "filebeat", "test", "output"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  network1:
+    name: docker_network
+    external: true
+

@@ -1,0 +1,38 @@
+#This node would be master eligible:
+node.roles: [ master, data ]
+#This node would be a data node as well:
+#Name the ES cluster
+cluster.name: ES_cluster
+#The initial set of master-eligible nodes
+cluster.initial_master_nodes: ["10.5.0.5", "10.5.0.6", "10.5.0.7"]
+#Keep node name as the hostname of the server. Would be easier to track.
+node.name: es-node3
+#Where the data would be stored
+# path.data: /var/lib/elasticsearch
+# #Where the logs would be stored
+# path.logs: /var/log/elasticsearch
+#Disabling swappingfor performance boost
+bootstrap.memory_lock: true
+#Enter the private IP of your node along with the localhost entry:
+network.host: [127.0.0.1, 10.5.0.7]
+#Private IPs of all your nodes:
+discovery.seed_hosts: ["10.5.0.5", "10.5.0.6", "10.5.0.7"]
+#To avoid split brain (N/2 + 1):
+# discovery.zen.minimum_master_nodes: 2
+# Require explicit names when deleting indices:
+action.destructive_requires_name: true
+
+
+# CONFIGURE SECURITY
+xpack.security.enabled: false
+
+xpack.security.enrollment.enabled: false
+
+# Enable encryption for HTTP API client connections, such as Kibana, Logstash, and Agents
+xpack.security.http.ssl:
+  enabled: false
+#  keystore.path: certs/http.p12
+
+# Enable encryption and mutual authentication between cluster nodes
+xpack.security.transport.ssl:
+  enabled: false

@@ -1,0 +1,96 @@
+version: '3.8'
+services:
+  es-node1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: es-node1
+    mem_limit: 1g
+    environment: 
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - type: bind
+        source: ./data-node1
+        target: /usr/share/elasticsearch/data
+      - type: bind
+        source: ./config/elasticsearch-node1.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+    ports:
+      - 9200:9200
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=50s || exit 1"]
+      interval: 1s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      custom_net:
+        ipv4_address: 10.5.0.5
+
+  es-node2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: es-node2
+    mem_limit: 1g
+    environment: 
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - type: bind
+        source: ./data-node2
+        target: /usr/share/elasticsearch/data
+      - type: bind
+        source: ./config/elasticsearch-node2.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+    networks:
+      custom_net:
+        ipv4_address: 10.5.0.6
+  
+  es-node3:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: es-node3
+    mem_limit: 1g
+    environment: 
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    command: >
+      bash -c "if (! elasticsearch-plugin list | grep analysis-icu); then elasticsearch-plugin install analysis-icu ; fi
+      && /usr/local/bin/docker-entrypoint.sh elasticsearch"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - type: bind
+        source: ./data-node3
+        target: /usr/share/elasticsearch/data
+      - type: bind
+        source: ./config/elasticsearch-node3.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+    networks:
+      custom_net:
+        ipv4_address: 10.5.0.7
+
+networks:
+  custom_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+          gateway: 10.5.0.1
